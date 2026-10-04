@@ -47,3 +47,4 @@ svg text{fill:var(--mute);font-size:11px;font-family:inherit}
 .chat{display:grid;gap:8px;max-height:420px;overflow:auto;margin-bottom:10px}
 .m{padding:9px 12px;border-radius:10px;white-space:pre-wrap;max-width:88%}.m.u{background:var(--acc);color:#fff;justify-self:end}.m.a{background:var(--acc2)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.chips button{font-size:13px;padding:5px 10px}
+.ov{position:fixed;inset:0;background:rgba(10,20,26,.65);display:grid;place-items:center;padding:16px;z-index:9;overflow:auto}.ov .card{max-width:440px;width:100%}
