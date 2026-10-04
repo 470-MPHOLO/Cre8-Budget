@@ -44,12 +44,38 @@ function tx(){
   '<label>Note<input name="note" maxlength="60"></label><button class="p">Add</button></form></div>'+
   '<div class="card stack"><h3>'+month+' transactions</h3>'+(list.length?'<div class="scroll">'+list.map(function(t){
     return'<div class="row"><span><b>'+esc(t.note||t.cat)+'</b><br><span class="k">'+t.date+' · '+(t.type==="in"?"Income":esc(t.cat))+'</span></span><span><b class="'+(t.type==="in"?"pos":"")+'">'+(t.type==="in"?"+":"−")+fmt(t.amt)+'</b><button class="x" data-del="'+t.id+'" aria-label="Delete">✕</button></span></div>'}).join("")+'</div>':'<div class="empty">Nothing logged for this month. Add your first transaction above.</div>')+'</div>'}
+var DEF=[{n:"Housing",g:"need"},{n:"Food",g:"need"},{n:"Transport",g:"need"},{n:"Bills",g:"need"},{n:"Health",g:"want"},{n:"Fun",g:"want"},{n:"Savings",g:"save"},{n:"Other",g:"want"}];
+function CL(){return S.catList&&S.catList.length?S.catList:DEF}
+function ensureCL(){if(!S.catList||!S.catList.length)S.catList=DEF.map(function(x){return{n:x.n,g:x.g}})}
+function syncCats(){CATS=CL().map(function(x){return x.n})}
+function avg3(c){var t=0,n=0;for(var k=1;k<=3;k++){var m=shift(month,-k);if(inMonth(m).length){n++;t+=sums(m).by[c]||0}}return n?t/n:0}
+function applyPlan(){var inc=(S.profile&&S.profile.income)||sums(month).i;if(!inc){alert("Add your income in Profile first.");return}
+  if(!confirm("Replace your categories and limits with the 50/30/20 plan?"))return;
+  S.catList=DEF.map(function(x){return{n:x.n,g:x.g}});S.budgets={};Object.keys(PLAN).forEach(function(c){S.budgets[c]=Math.round(inc*PLAN[c]/100)});save();render()}
+function tracked(m,day){var d=inMonth(m).filter(function(t){return t.type==="out"&&!t.rec}).map(function(t){return+t.date.slice(8)});if(!d.length)return 0;return Math.max(1,day-Math.min.apply(null,d)+1)}
 function bd(){
-  var s=sums(month);
-  return'<div class="card"><h3>Monthly limits</h3><p class="k">Set a limit per category. Leave at 0 to skip. Progress uses '+month+' spending.</p>'+
-  CATS.map(function(c){var u=s.by[c]||0,l=S.budgets[c]||0;
-    return'<div class="row"><label style="flex:1">'+c+' <span class="k">(spent '+fmt(u)+')</span></label><input type="number" min="0" step="1" value="'+l+'" data-bud="'+c+'" style="width:110px" aria-label="'+c+' limit"></div>'}).join("")+'</div>'+
-  '<div class="card stack"><h3>Status</h3>'+budgetRows(month)+'</div>'}
+  var s=sums(month),inc=(S.profile&&S.profile.income)||s.i,L=CL(),tot=0,g={need:0,want:0,save:0},tips=[];
+  L.forEach(function(x){var l=S.budgets[x.n]||0;tot+=l;g[x.g]=(g[x.g]||0)+l});
+  var un=inc-tot;
+  if(!inc)tips.push(["w","Add your income in Profile so I can check your plan."]);
+  else{
+    if(un<0)tips.push(["b","You have planned "+fmt(-un)+" more than your income. Lower a limit or two."]);
+    else if(un>inc*.02)tips.push(["w",fmt(un)+" is not assigned yet. Give it a job, like savings or a goal."]);
+    else tips.push(["","Your plan uses all of your income. Well done."]);
+    var np=Math.round(g.need/inc*100),sp=Math.round(g.save/inc*100);
+    if(np>60)tips.push(["w","Needs take "+np+"% of income. About 50% is the common guide, so check housing and bills first."]);
+    if(sp<10)tips.push(["w","Savings are "+sp+"% of income. Aim for 10% to start and 20% over time."]);
+    else if(sp>=20)tips.push(["","Savings are "+sp+"% of income, which meets the 20% guide."])}
+  var mx=Math.max(inc,tot,1);function w(v){return(v/mx*100).toFixed(1)+"%"}
+  var bar='<div class="alloc" role="img" aria-label="How your income is planned"><i style="width:'+w(g.need)+';background:var(--acc)"></i><i style="width:'+w(g.want)+';background:var(--warn)"></i><i style="width:'+w(g.save)+';background:var(--good)"></i></div><div class="leg"><span><b style="background:var(--acc)"></b>Needs '+fmt(g.need)+'</span><span><b style="background:var(--warn)"></b>Wants '+fmt(g.want)+'</span><span><b style="background:var(--good)"></b>Savings '+fmt(g.save)+'</span></div>';
+  var gs=function(v){return'<option value="need"'+(v==="need"?" selected":"")+'>Need</option><option value="want"'+(v==="want"?" selected":"")+'>Want</option><option value="save"'+(v==="save"?" selected":"")+'>Savings</option>'};
+  var rows=L.map(function(x){var u=s.by[x.n]||0,l=S.budgets[x.n]||0,a=avg3(x.n),r=Math.round(a),h="";
+    if(a>0){h=' · usual '+fmt(a);if(l>0&&l<a*.9)h+=' <span class="neg">(limit is below your usual spend)</span>';else if(l>a*1.5)h+=' (room to trim)';if(l!==r)h+=' <button class="x" data-use="'+esc(x.n)+'" data-amt="'+r+'">Use '+fmt(r)+'</button>'}
+    return'<div class="row" style="display:block"><div class="crow"><input value="'+esc(x.n)+'" data-ren="'+esc(x.n)+'" maxlength="24" aria-label="Category name"><select data-grp="'+esc(x.n)+'" aria-label="Group">'+gs(x.g)+'</select><input type="number" min="0" step="1" value="'+l+'" data-bud="'+esc(x.n)+'" aria-label="'+esc(x.n)+' limit"><button class="x" data-cdel="'+esc(x.n)+'" aria-label="Delete '+esc(x.n)+'">✕</button></div><div class="k">Spent '+fmt(u)+h+'</div></div>'}).join("");
+  return'<div class="card"><h3>Your plan</h3><div class="k">Income '+fmt(inc)+' · Planned '+fmt(tot)+' · Unassigned '+fmt(Math.max(0,un))+'</div>'+bar+'<div class="ins" style="margin-top:12px">'+tips.map(function(t){return'<div class="'+t[0]+'">'+t[1]+'</div>'}).join("")+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button data-plan="1">Apply 50/30/20 plan</button><button data-clear="1">Clear all limits</button></div></div>'+
+  '<div class="card stack"><h3>Categories and limits</h3><p class="k">Rename categories, set your own limits, or add what matters to you. Needs are things you must pay, wants are choices.</p>'+rows+
+  '<form class="f" id="af" style="margin-top:12px"><label>New category<input name="n" maxlength="24" required></label><label>Group<select name="g">'+gs("want")+'</select></label><button class="p">Add category</button></form></div>'+
+  '<div class="card stack"><h3>This month</h3>'+budgetRows(month)+'</div>'}
 function gl(){
   return'<div class="card"><h3>New goal</h3><form class="f" id="gf"><label>Name<input name="name" required maxlength="40"></label><label>Target<input name="target" type="number" min="1" required></label><label>Already saved<input name="saved" type="number" min="0" value="0"></label><button class="p">Add goal</button></form></div>'+
   '<div class="stack">'+(S.goals.length?S.goals.map(function(g){var p=Math.min(100,g.saved/g.target*100);
@@ -58,7 +84,8 @@ function gl(){
 function insights(){
   var s=sums(month),p=sums(shift(month,-1)),cur=month===new Date().toISOString().slice(0,7),n=new Date(),dim=new Date(+month.slice(0,4),+month.slice(5),0).getDate(),day=cur?n.getDate():dim,out=[];
   if(!inMonth(month).length)return'<div class="empty">Add transactions to unlock insights.</div>';
-  if(cur){var fc=s.e/day*dim;out.push(["",'On pace to spend <b>'+fmt(fc)+'</b> by month end'+(s.i?' ('+(fc>s.i?'above':'below')+' your income of '+fmt(s.i)+').':'.')]);
+  if(cur&&tracked(month,day)<7)out.push(["","You have tracked fewer than 7 days so far, so a forecast would be unreliable. I will show one after a week of tracking."]);
+  if(cur&&tracked(month,day)>=7){var fc=s.e+s.e/Math.max(1,tracked(month,day))*(dim-day);out.push(["",'On pace to spend <b>'+fmt(fc)+'</b> by month end'+(s.i?' ('+(fc>s.i?'above':'below')+' your income of '+fmt(s.i)+').':'.')]);
     var left=s.i-s.e,dl=dim-day;if(dl>0&&left>0)out.push(["",'You can spend about <b>'+fmt(left/dl)+'</b> a day for the rest of the month.']);if(left<0)out.push(["b",'You have spent <b>'+fmt(-left)+'</b> more than you earned this month.'])}
   var top=Object.keys(s.by).sort(function(a,b){return s.by[b]-s.by[a]})[0];if(top)out.push(["",'Biggest category: <b>'+esc(top)+'</b> at '+fmt(s.by[top])+' ('+Math.round(s.by[top]/s.e*100)+'% of spending).']);
   if(p.e>0){var d=Math.round((s.e-p.e)/p.e*100);out.push([d>10?"w":"",'Spending is '+Math.abs(d)+'% '+(d>=0?'higher':'lower')+' than last month.'])}
@@ -86,7 +113,7 @@ function answer(q){
     if(!bk.length)return"No limits are set yet. Open the Budgets tab and give your top categories a monthly limit.";
     return bk.map(function(c){var l=S.budgets[c],u=s.by[c]||0;return c+": "+fmt(u)+" of "+fmt(l)+" ("+Math.round(u/l*100)+"%)"+(u>l?" - over by "+fmt(u-l):"")}).join("\n")}
   if(has("track","pace","forecast","month end","end of month","afford")){
-    var fc=s.e/day*dim;return cur?"You have spent "+fmt(s.e)+" in "+day+" days, which puts you on pace for about "+fmt(fc)+" this month."+(s.i?(fc>s.i?" That is above your income, so slow down on "+(keys[0]||"spending")+".":" That is within your income of "+fmt(s.i)+". Nice."):""):"For "+month+" you spent "+fmt(s.e)+" and earned "+fmt(s.i)+"."}
+    var fc=s.e+s.e/Math.max(1,tracked(month,day))*(dim-day),pl=Object.keys(S.budgets).reduce(function(t,c){return t+(S.budgets[c]||0)},0);if(cur&&tracked(month,day)<7)return"You have only tracked "+tracked(month,day)+" day(s) so far, so a forecast would be unreliable: one big payment like rent can look like a whole month of spending. So far you have spent "+fmt(s.e)+(pl?" of your "+fmt(pl)+" plan ("+Math.round(s.e/pl*100)+"%).":".")+" Ask me again after a week of tracking.";return cur?"You have spent "+fmt(s.e)+" over "+tracked(month,day)+" tracked days, which puts you on pace for about "+fmt(fc)+" this month."+(s.i?(fc>s.i?" That is above your income, so slow down on "+(keys[0]||"spending")+".":" That is within your income of "+fmt(s.i)+". Nice."):""):"For "+month+" you spent "+fmt(s.e)+" and earned "+fmt(s.i)+"."}
   if(has("where","spend","spent","categor","going","biggest")){
     if(!keys.length)return"No spending logged for "+month+" yet.";
     return"Top spending in "+month+":\n"+keys.slice(0,4).map(function(c){return c+": "+fmt(s.by[c])+" ("+Math.round(s.by[c]/s.e*100)+"%)"}).join("\n")}
@@ -96,7 +123,7 @@ function answer(q){
   if(has("hello","hi","hey","help"))return"Hi! I can explain where your money goes, check your budgets and goals, forecast the month, and suggest ways to save. Try one of the buttons above.";
   return"I can help with spending, savings, budgets, goals, forecasts and budgeting basics. Try: \"Where is my money going?\" or \"How can I save more?\""}
 function ask(q){chatLog.push({role:"user",content:q});chatLog.push({role:"assistant",content:answer(q)});render();var c=$("#chat");if(c)c.scrollTop=c.scrollHeight}
-function render(){
+function render(){syncCats();
   document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.t===tab)});
   $("#month").value=month;$("#cur").value=code();$("#hi").textContent=S.profile&&S.profile.name?"Hi, "+S.profile.name+" · ":"";
   $("#view").innerHTML={ov:ov,tx:tx,bd:bd,gl:gl,rc:rc,ch:ch}[tab]();
@@ -106,6 +133,7 @@ $("#month").onchange=function(e){if(e.target.value){month=e.target.value;render(
 $("#cur").onchange=function(e){S.code=e.target.value;save();render()};
 $("#theme").onclick=function(){var r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"};
 $("#view").onsubmit=function(e){e.preventDefault();var f=new FormData(e.target);
+  if(e.target.id==="af"){var nn=f.get("n").trim();if(nn&&!CL().some(function(x){return x.n.toLowerCase()===nn.toLowerCase()})){ensureCL();S.catList.push({n:nn,g:f.get("g")});save()}render();return}
   if(e.target.id==="cf"){var q=f.get("q").trim();e.target.reset();if(q)ask(q);return}
   if(e.target.id==="rf"){var a2=parseFloat(f.get("amt"));if(!(a2>0))return;S.rec.push({id:uid(),type:f.get("type"),amt:a2,cat:f.get("cat"),day:parseInt(f.get("day"))||1,note:f.get("note").trim(),start:month});materialise()}
   else if(e.target.id==="tf"){var a=parseFloat(f.get("amt"));if(!(a>0))return;S.txs.push({id:uid(),type:f.get("type"),amt:a,cat:f.get("cat"),date:f.get("date"),note:f.get("note").trim()});month=f.get("date").slice(0,7)}
@@ -113,12 +141,22 @@ $("#view").onsubmit=function(e){e.preventDefault();var f=new FormData(e.target);
   save();render()};
 $("#view").onclick=function(e){var d=e.target.dataset;
   if(d.q){ask(d.q);return}
+  if(d.cdel!==undefined){if(confirm("Remove "+d.cdel+"? Past transactions keep their label.")){ensureCL();S.catList=S.catList.filter(function(x){return x.n!==d.cdel});delete S.budgets[d.cdel];save();render()}return}
+  if(d.use!==undefined){S.budgets[d.use]=+d.amt;save();render();return}
+  if(d.plan!==undefined){applyPlan();return}
+  if(d.clear!==undefined){if(confirm("Clear every category limit?")){S.budgets={};save();render()}return}
   if(d.rdel){S.rec=S.rec.filter(function(r){return r.id!==d.rdel});S.txs=S.txs.filter(function(t){return t.id.indexOf("rec_"+d.rdel+"_")!==0})}
   else if(d.del){S.txs=S.txs.filter(function(t){return t.id!==d.del})}
   else if(d.gdel){S.goals=S.goals.filter(function(g){return g.id!==d.gdel})}
   else if(d.gadd){var v=parseFloat($('[data-gin="'+d.gadd+'"]').value);if(!(v>0))return;S.goals.forEach(function(g){if(g.id===d.gadd)g.saved+=v})}
   else return;save();render()};
-$("#view").onchange=function(e){var c=e.target.dataset.bud;if(c){S.budgets[c]=Math.max(0,parseFloat(e.target.value)||0);save();render()}};
+$("#view").onchange=function(e){var d=e.target.dataset,v=e.target.value;
+  if(d.bud!==undefined){S.budgets[d.bud]=Math.max(0,parseFloat(v)||0);save();render()}
+  else if(d.grp!==undefined){ensureCL();S.catList.forEach(function(x){if(x.n===d.grp)x.g=v});save();render()}
+  else if(d.ren!==undefined){var o=d.ren,nu=v.trim();ensureCL();
+    if(!nu||nu===o||S.catList.some(function(x){return x.n.toLowerCase()===nu.toLowerCase()&&x.n!==o})){render();return}
+    S.catList.forEach(function(x){if(x.n===o)x.n=nu});if(S.budgets[o]!==undefined){S.budgets[nu]=S.budgets[o];delete S.budgets[o]}
+    S.txs.forEach(function(t){if(t.cat===o)t.cat=nu});S.rec.forEach(function(r){if(r.cat===o)r.cat=nu});save();render()}};
 $("#exp").onclick=function(){var rows=[["date","type","category","amount","note"]].concat(S.txs.map(function(t){return[t.date,t.type,t.cat,t.amt,'"'+t.note.replace(/"/g,'""')+'"']}));
   var bl=new Blob([rows.join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="cre8-budget.csv";a.click()};
 $("#rst").onclick=function(){if(confirm("Delete all transactions, budgets and goals?")){S={cur:S.cur,code:code(),txs:[],budgets:{},goals:[],rec:[]};save();render();openSetup()}};
@@ -148,7 +186,7 @@ function openSetup(){
     S.rec=S.rec.filter(function(r){return r.id!=="salary"});S.txs=S.txs.filter(function(t){return t.id!=="rec_salary_"+mo});
     S.rec.push({id:"salary",type:"in",amt:inc,cat:"Other",day:S.profile.day,note:"Salary",start:mo});
     var pl=f.get("plan");
-    if(pl==="plan"){S.budgets={};Object.keys(PLAN).forEach(function(c){S.budgets[c]=Math.round(inc*PLAN[c]/100)});
+    if(pl==="plan"){S.catList=DEF.map(function(x){return{n:x.n,g:x.g}});S.budgets={};Object.keys(PLAN).forEach(function(c){S.budgets[c]=Math.round(inc*PLAN[c]/100)});
       if(!S.goals.some(function(g){return g.name==="Emergency fund"}))S.goals.push({id:uid(),name:"Emergency fund",target:Math.round(inc*3),saved:0})}
     else if(pl==="blank")S.budgets={};
     S.setup=1;save();materialise();el.remove();month=mo;render()}}
