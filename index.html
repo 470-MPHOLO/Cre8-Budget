@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="description" content="Plan your monthly budget, track spending and reach your goals. Powered by cre8learn Institute.">
+<meta name="theme-color" content="#0e6e6e">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cre8 Budget – by cre8learn Institute</title>
+<title>Cre8 Budget : by cre8learn Institute</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
 <header>
-  <div><h1>Cre8 Budget</h1><div class="k">Powered by cre8learn Institute</div></div>
+  <div><h1>Cre8 Budget</h1><div class="k"><span id="hi"></span>Powered by cre8learn Institute</div></div>
   <div class="tools">
     <input type="month" id="month" aria-label="Month">
-    <select id="cur" aria-label="Currency"><option>M</option><option>R</option><option>$</option><option>€</option><option>£</option></select>
+    <select id="cur" aria-label="Currency"></select>
     <button id="theme" title="Toggle theme">◐</button>
   </div>
 </header>
@@ -26,7 +28,7 @@
   <button role="tab" data-t="ch" aria-selected="false">Coach</button>
 </nav>
 <main id="view"></main>
-<p class="k" style="margin-top:20px">Powered by cre8learn Institute · Data stays on this device (auto-created local database). <button class="x" id="exp">Export CSV</button><button class="x" id="rst">Reset all</button></p>
+<p class="k" style="margin-top:20px">Powered by cre8learn Institute · Data stays on this device (auto-created local database). <button class="x" id="prof">Profile</button><button class="x" id="bak">Backup</button><button class="x" id="res">Restore</button><input type="file" id="rfile" accept=".json,application/json" hidden><button class="x" id="exp">Export CSV</button><button class="x" id="rst">Reset all</button><span id="pst"></span></p>
 </div>
 <script src="app.js" defer></script>
 </body>
