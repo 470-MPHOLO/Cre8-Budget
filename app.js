@@ -11,7 +11,6 @@ function save(){try{if(idb)idb.transaction("kv","readwrite").objectStore("kv").p
 function materialise(){var now=new Date().toISOString().slice(0,7),ch=false;S.rec.forEach(function(r){for(var m=r.start;m<=now;m=shift(m,1)){var id="rec_"+r.id+"_"+m;if(!S.txs.some(function(t){return t.id===id})){var d=m+"-"+String(Math.min(r.day,28)).padStart(2,"0");S.txs.push({id:id,type:r.type,amt:r.amt,cat:r.cat,date:d,note:r.note||r.cat,rec:1});ch=true}}});if(ch)save()}
 function $(s){return document.querySelector(s)}
 function esc(t){return String(t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
-function fmt(n){return S.cur+" "+Number(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2})}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 function inMonth(m){return S.txs.filter(function(t){return t.date.slice(0,7)===m})}
 function sums(m){var a=inMonth(m),i=0,e=0,by={};a.forEach(function(t){if(t.type==="in")i+=t.amt;else{e+=t.amt;by[t.cat]=(by[t.cat]||0)+t.amt}});return{i:i,e:e,by:by}}
@@ -99,12 +98,12 @@ function answer(q){
 function ask(q){chatLog.push({role:"user",content:q});chatLog.push({role:"assistant",content:answer(q)});render();var c=$("#chat");if(c)c.scrollTop=c.scrollHeight}
 function render(){
   document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.t===tab)});
-  $("#month").value=month;$("#cur").value=S.cur;
+  $("#month").value=month;$("#cur").value=code();$("#hi").textContent=S.profile&&S.profile.name?"Hi, "+S.profile.name+" · ":"";
   $("#view").innerHTML={ov:ov,tx:tx,bd:bd,gl:gl,rc:rc,ch:ch}[tab]();
 }
 $("#tabs").onclick=function(e){if(e.target.dataset.t){tab=e.target.dataset.t;render()}};
 $("#month").onchange=function(e){if(e.target.value){month=e.target.value;render()}};
-$("#cur").onchange=function(e){S.cur=e.target.value;save();render()};
+$("#cur").onchange=function(e){S.code=e.target.value;save();render()};
 $("#theme").onclick=function(){var r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"};
 $("#view").onsubmit=function(e){e.preventDefault();var f=new FormData(e.target);
   if(e.target.id==="cf"){var q=f.get("q").trim();e.target.reset();if(q)ask(q);return}
@@ -122,6 +121,38 @@ $("#view").onclick=function(e){var d=e.target.dataset;
 $("#view").onchange=function(e){var c=e.target.dataset.bud;if(c){S.budgets[c]=Math.max(0,parseFloat(e.target.value)||0);save();render()}};
 $("#exp").onclick=function(){var rows=[["date","type","category","amount","note"]].concat(S.txs.map(function(t){return[t.date,t.type,t.cat,t.amt,'"'+t.note.replace(/"/g,'""')+'"']}));
   var bl=new Blob([rows.join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="cre8-budget.csv";a.click()};
-$("#rst").onclick=function(){if(confirm("Delete all transactions, budgets and goals?")){S={cur:S.cur,txs:[],budgets:{},goals:[],rec:[]};save();render()}};
+$("#rst").onclick=function(){if(confirm("Delete all transactions, budgets and goals?")){S={cur:S.cur,code:code(),txs:[],budgets:{},goals:[],rec:[]};save();render();openSetup()}};
+$("#bak").onclick=function(){var bl=new Blob([JSON.stringify(S)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="cre8-budget-backup-"+new Date().toISOString().slice(0,10)+".json";a.click()};
+$("#res").onclick=function(){$("#rfile").click()};
+$("#rfile").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){try{var d=JSON.parse(r.result);if(!d||!Array.isArray(d.txs))throw 0;
+    if(!confirm("Replace everything on this device with the backup from "+f.name+"?"))return;
+    S=Object.assign({cur:"M",txs:[],budgets:{},goals:[],rec:[]},d);save();materialise();render()}catch(x){alert("That file is not a Cre8 Budget backup.")}};
+  r.readAsText(f);e.target.value=""};
+var SYM={M:"LSL",R:"ZAR","$":"USD","€":"EUR","£":"GBP"};
+var CODES=["LSL","ZAR","USD","EUR","GBP","NGN","KES","GHS","TZS","UGX","BWP","NAD","ZMW","MZN","EGP","INR","CNY","JPY","AUD","CAD","BRL","AED","SAR","PKR","PHP","MXN"];
+var PLAN={Housing:25,Food:12,Transport:8,Bills:5,Health:5,Fun:10,Other:15,Savings:20};
+function code(){return S.code||SYM[S.cur]||"USD"}
+function guess(){var r=(navigator.language||"").split("-")[1]||"";return({LS:"LSL",ZA:"ZAR",NG:"NGN",KE:"KES",GH:"GHS",TZ:"TZS",UG:"UGX",BW:"BWP",NA:"NAD",ZM:"ZMW",EG:"EGP",IN:"INR",GB:"GBP",US:"USD",CA:"CAD",AU:"AUD",BR:"BRL",AE:"AED",DE:"EUR",FR:"EUR"})[r]||"USD"}
+function curOpts(sel){var dn;try{dn=new Intl.DisplayNames(undefined,{type:"currency"})}catch(e){}
+  return CODES.map(function(c){var n="";try{n=dn?dn.of(c):""}catch(e){}return'<option value="'+c+'"'+(c===sel?" selected":"")+'>'+c+(n?" - "+esc(n):"")+'</option>'}).join("")}
+function fmt(n){try{return new Intl.NumberFormat(undefined,{style:"currency",currency:code(),maximumFractionDigits:2}).format(n)}catch(e){return code()+" "+Number(n).toFixed(2)}}
+function openSetup(){
+  if($("#ob"))return;var p=S.profile||{},ed=!!S.setup,el=document.createElement("div");el.className="ov";el.id="ob";
+  el.innerHTML='<div class="card" role="dialog" aria-modal="true" aria-labelledby="obt"><h2 id="obt">'+(ed?"Your profile":"Welcome to Cre8 Budget")+'</h2><p class="k">'+(ed?"Update your income and preferences.":"Four quick questions. You can change them anytime.")+'</p><form class="f" id="obf" style="grid-template-columns:1fr;margin-top:12px"><label>Your name<input name="name" maxlength="30" autocomplete="given-name" value="'+esc(p.name||"")+'"></label><label>Currency<select name="code">'+curOpts(ed?code():guess())+'</select></label><label>Monthly income after tax<input name="income" type="number" min="1" step="0.01" inputmode="decimal" required value="'+(p.income||"")+'"></label><label>Pay day (1 to 28)<input name="day" type="number" min="1" max="28" value="'+(p.day||25)+'"></label><label>Budget plan<select name="plan"><option value="plan">50/30/20 plan (recommended)</option><option value="blank">Start blank</option>'+(ed?'<option value="keep" selected>Keep my current budgets</option>':'')+'</select></label><div style="display:flex;gap:8px"><button class="p" style="flex:1">'+(ed?"Save":"Get started")+'</button>'+(ed?'<button type="button" id="obx">Cancel</button>':'')+'</div></form></div>';
+  document.body.appendChild(el);var fi=el.querySelector("input");if(fi)fi.focus();
+  if(ed)$("#obx").onclick=function(){el.remove()};
+  $("#obf").onsubmit=function(e){e.preventDefault();var f=new FormData(e.target),inc=parseFloat(f.get("income"));if(!(inc>0))return;
+    S.code=f.get("code");S.profile={name:f.get("name").trim(),income:inc,day:parseInt(f.get("day"))||25};
+    var mo=new Date().toISOString().slice(0,7);
+    S.rec=S.rec.filter(function(r){return r.id!=="salary"});S.txs=S.txs.filter(function(t){return t.id!=="rec_salary_"+mo});
+    S.rec.push({id:"salary",type:"in",amt:inc,cat:"Other",day:S.profile.day,note:"Salary",start:mo});
+    var pl=f.get("plan");
+    if(pl==="plan"){S.budgets={};Object.keys(PLAN).forEach(function(c){S.budgets[c]=Math.round(inc*PLAN[c]/100)});
+      if(!S.goals.some(function(g){return g.name==="Emergency fund"}))S.goals.push({id:uid(),name:"Emergency fund",target:Math.round(inc*3),saved:0})}
+    else if(pl==="blank")S.budgets={};
+    S.setup=1;save();materialise();el.remove();month=mo;render()}}
+$("#prof").onclick=openSetup;
+$("#cur").innerHTML=curOpts(code());
 render();
-load().then(function(x){if(x){S=Object.assign(S,x);if(!S.rec)S.rec=[]}materialise();render()});
+load().then(function(x){if(x){S=Object.assign(S,x);if(!S.rec)S.rec=[]}materialise();render();if(!S.setup)openSetup();if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){var p=$("#pst");if(p)p.textContent=ok?" Storage protected.":" Tip: back up regularly.";}).catch(function(){})}});
