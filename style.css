@@ -1,0 +1,49 @@
+:root{--bg:#eef2f4;--card:#fff;--ink:#12212b;--mute:#5d6f7a;--line:#d6dee3;--acc:#0e6e6e;--acc2:#e3f1f0;--warn:#b45309;--bad:#b42318;--good:#1a7f4b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a20;--card:#17262e;--ink:#e6eef2;--mute:#93a6b1;--line:#2a3d48;--acc:#4fc3bd;--acc2:#1b3a3d;--warn:#f0a04b;--bad:#ff7b6e;--good:#5dd39e}}
+:root[data-theme="dark"]{--bg:#0f1a20;--card:#17262e;--ink:#e6eef2;--mute:#93a6b1;--line:#2a3d48;--acc:#4fc3bd;--acc2:#1b3a3d;--warn:#f0a04b;--bad:#ff7b6e;--good:#5dd39e}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.wrap{max-width:920px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:8px 0 14px}
+header h1{font-size:26px}
+.tools{display:flex;gap:8px;align-items:center}
+input,select,button{font:inherit;color:inherit}
+input,select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 14px}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.p{color:#0b1a1c}}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:10px 14px;color:var(--mute);font-weight:600}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--acc)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{font-size:17px;margin-bottom:10px}
+.k{color:var(--mute);font-size:13px}
+.big{font-family:"Bricolage Grotesque",sans-serif;font-size:30px;font-weight:700;line-height:1.1}
+.hero{background:var(--acc);color:#fff;border-color:var(--acc)}
+.hero .k{color:#d5efed}
+.pos{color:var(--good)}.neg{color:var(--bad)}
+.stack{display:grid;gap:12px;margin-top:12px}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.bar{height:10px;border-radius:5px;background:var(--acc2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:5px}
+.bar.warn i{background:var(--warn)}.bar.over i{background:var(--bad)}
+form.f{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end}
+label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+.scroll{overflow-x:auto}
+.x{border:0;background:none;color:var(--mute);padding:4px 8px}
+.empty{color:var(--mute);padding:14px 0}
+svg text{fill:var(--mute);font-size:11px;font-family:inherit}
+.leg{display:flex;gap:14px;font-size:13px;color:var(--mute);margin-top:6px}
+.leg b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.ins{display:grid;gap:8px}.ins div{padding:10px 12px;border-left:4px solid var(--acc);background:var(--acc2);border-radius:6px}
+.ins .w{border-color:var(--warn)}.ins .b{border-color:var(--bad)}
+.chat{display:grid;gap:8px;max-height:420px;overflow:auto;margin-bottom:10px}
+.m{padding:9px 12px;border-radius:10px;white-space:pre-wrap;max-width:88%}.m.u{background:var(--acc);color:#fff;justify-self:end}.m.a{background:var(--acc2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.chips button{font-size:13px;padding:5px 10px}
